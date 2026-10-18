@@ -68,3 +68,12 @@
 - Serialized OAuth refresh operations per account to avoid racing rotated token state.
 - Pure Kotlin smoke tests pass including out-of-bounds Range and quota overflow cases.
 - Google Actions remains at runner-provisioning failure with `runner_id: 0`, `steps: []`; no Android APK was produced or verified.
+
+## v0.2.5 alpha — local data-safety hardening
+
+- Local split/assemble now refuses existing destination files or occupied chunk folders; test added to guard against replacement of prior files.
+- MBOX/EML scanner ignores message bodies, including spoofed-looking `From:` and `Subject:` lines; messages remain **probable** evidence.
+- Added offline platform-category hints (`Development`, `Productivity`, etc.) and boundary-safe matching for known hostnames.
+- Safe-quota math saturates without 64-bit overflow and upload completion is checked explicitly.
+- Portable Kotlin core smoke tests pass. **Android app still has not been compiled**, and no APK has been validated on a device; the registered OAuth flow has not been integration-tested.
+- Docker-first builds remain configured in `Dockerfile`, `compose.yaml` and `tools/docker-build.sh`. GitHub-hosted runner allocation is an external blocker (no runner ID, no steps).

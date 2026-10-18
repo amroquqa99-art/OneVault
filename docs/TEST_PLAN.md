@@ -28,3 +28,12 @@ Core unit smoke test: `bash tools/test-core.sh` (requires Kotlin CLI).
 6. Trigger concurrent Google token refresh requests for one account: ensure stored token state is serialized.
 
 Cases 1, 2, 5, 6 need real Android/DB or instrumentation validation; pure decision/parsing functions for 1–5 have JVM tests. Android CI/build is still unavailable due to runner allocation failure.
+
+## New v0.2.5 regression checks
+
+- Splitting into an existing, non-empty chunk directory must fail without altering any original chunks.
+- Assembling over a preexisting output must fail, preserving its bytes; corrupted parts must never publish the output.
+- MBOX/EML message bodies must not create registration associations even when text contains apparent `From:` and `Subject:` lines.
+- Subdomain categorization must classify `accounts.github.com` as Development but reject lookalikes such as `fakegithub.com`.
+- Validate safe quota arithmetic at `Long.MAX_VALUE` bounds.
+- Actual Android backup/restore, OAuth identity flow, SAF handling, and WorkManager jobs still require a built APK and hardware/emulator tests.

@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.2.5-alpha — 2026-10-18
+
+- Prevented accidental overwrite of existing output files during local chunk reassembly: atomic no-clobber hard-link publication after checksums pass.
+- Prevented local split operations from reusing nonempty chunk directories; partial chunks are cleaned up after errors.
+- Prevented malicious or malformed mail-message body lines from being mistaken for registration headers during EML/MBOX evidence discovery.
+- Added deterministic on-device service-category suggestions with conservative domain-boundary matching; never promotes heuristic email evidence to a confirmed account.
+- Corrected saturating safe-quota arithmetic for extreme 64-bit values.
+- Added extra pure Kotlin regression cases for file protection, category hints and mail-body header spoofing.
+- Upload worker now retains final server-completion confirmation and handles 308 status checks conservatively.
+
+**Verification:** `bash tools/test-core.sh` passes on a local JDK/Kotlin runtime. Full Android Gradle compilation and installation have not been verified; GitHub Actions runner has not been provisioned. Do not trust this alpha build for primary credentials or irreplaceable files.
+
+
 ## v0.2.4-alpha — 2026-10-18
 
 - Enforced quota checks for unknown provider capacity and earlier in-flight upload reservations.

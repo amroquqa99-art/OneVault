@@ -2,7 +2,11 @@ package org.onevault.app.core
 
 import java.io.Reader
 
-/** Import of user-exported MBOX/EML metadata; never uses Gmail credentials or reads message bodies. */
+/**
+ * Conservative metadata-only scan of user-exported EML or MBOX files.
+ * Only genuine message headers are inspected; body text cannot forge registration evidence.
+ * Findings are hints, never authoritative proof of an active external account.
+ */
 object MailEvidence {
     data class Finding(val host:String,val from:String,val subject:String,val confidence:Evidence)
     private val sender = Regex("[A-Za-z0-9._%+\\-]+@([A-Za-z0-9.\\-]+\\.[A-Za-z]{2,})")
@@ -10,10 +14,12 @@ object MailEvidence {
         "(?i)(welcome|verify your|verification|confirm your|activate your|account created|sign.?up|registration|reset your password|password reset|"+
             "تأكيد حساب|تفعيل حساب|التحقق من|تسجيل حساب|إنشاء حساب|أهلا بك|مرحباً بك|مرحبًا بك)")
     private val ignored = setOf("gmail.com","googlemail.com","google.com","outlook.com","yahoo.com")
-    /** Mail headers only, handles unfolded multi-line From/Subject and per-message boundaries. */
+    private const val MAX_HEADER = 1024
+
+    /** Reads line-by-line; MBOX envelopes (From + space) mark distinct messages. */
     fun scan(reader:Reader,onFinding:(Finding)->Unit):Int {
-        var from="";var subject="";var header=false;var lastKey="";var count=0
-        fun finish() {
+        var from="";var subject="";var inHeaders=true;var seenHeader=false;var lastKey="";var count=0
+        fun finishHeader() {
             if(!keywords.containsMatchIn(subject))return
             val domain=sender.find(from)?.groupValues?.get(1)?.lowercase()?:return
             val parts=domain.split('.')
@@ -25,23 +31,35 @@ object MailEvidence {
         }
         reader.buffered().useLines { lines ->
             lines.forEach { line ->
-                if(line.startsWith("From ")) {
-                    if(header)finish()
-                    from="";subject="";header=true;lastKey=""
-                } else if(line.startsWith("From:",true)) {
-                    if(!header)header=true
-                    from=line.substringAfter(':').trim();lastKey="from"
-                } else if(line.startsWith("Subject:",true)) {
-                    if(!header)header=true
-                    subject=line.substringAfter(':').trim();lastKey="subject"
-                } else if(line.isNotEmpty() && (line[0]==' '||line[0]=='\t') && header) {
-                    when(lastKey) {"from"->from+=" "+line.trim();"subject"->subject+=" "+line.trim()}
-                } else if(line.isEmpty() && header) {
-                    finish();header=false;lastKey=""
-                } else if(header && line.contains(':'))lastKey=""
+                when {
+                    line.startsWith("From ") -> {
+                        if(inHeaders && seenHeader) finishHeader()
+                        from="";subject="";inHeaders=true;seenHeader=false;lastKey=""
+                    }
+                    !inHeaders -> Unit // Ignore message body, including forged From:/Subject: lines.
+                    line.isEmpty() -> {
+                        if(seenHeader) finishHeader()
+                        inHeaders=false;lastKey=""
+                    }
+                    (line[0]==' ' || line[0]=='\t') && seenHeader -> {
+                        when(lastKey) {
+                            "from" -> from=(from+" "+line.trim()).take(MAX_HEADER)
+                            "subject" -> subject=(subject+" "+line.trim()).take(MAX_HEADER)
+                        }
+                    }
+                    line.contains(':') -> {
+                        seenHeader=true
+                        val key=line.substringBefore(':').lowercase()
+                        lastKey=key
+                        when(key) {
+                            "from" -> from=line.substringAfter(':').trim().take(MAX_HEADER)
+                            "subject" -> subject=line.substringAfter(':').trim().take(MAX_HEADER)
+                        }
+                    }
+                }
             }
         }
-        if(header)finish()
+        if(inHeaders && seenHeader) finishHeader()
         return count
     }
 }

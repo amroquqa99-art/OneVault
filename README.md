@@ -10,13 +10,13 @@
 - Android UI: dashboard, account registry, per-account platform-category breakdown and confidence counts, platform directory, cached cloud file explorer, vault, settings.
 - Local SQLite account and platform graph, categories, states, linked-evidence confidence, per-account storage reserve.
 - Manual account/platform/link management and CSV account import (`email,alias,category`).
-- Offline email-header evidence import from **user-exported MBOX/EML files**. Marks results as **probable**, never confirmed; only reads message headers, not message bodies.
+- Offline email-header evidence import from **user-exported MBOX/EML files**. Marks results as **probable**, never confirmed; only reads message headers, not message bodies, and suggests broad platform categories locally.
 - AES-GCM secret encryption using Android Keystore; password reveal + delete.
 - Password-protected portable backup and restore (PBKDF2-HMAC-SHA256 + AES-256-GCM). Google OAuth refresh tokens are deliberately excluded from backups.
 - Google OAuth via AppAuth (requires your own Google Cloud Android OAuth client configuration); access/refresh state encrypted with Keystore.
 - Google Drive API: about/storage quota, paginated file list and cache, native Drive links, downloads for binary files, resumable chunked uploads of files chosen in Android's file picker.
 - WorkManager persistent upload jobs with network-required scheduling, exponential retry, session checkpoints and account-specific reserve policy.
-- Streamed local chunk split/reassemble engine with SHA-256 verification (for approved/user-controlled storage targets; **not wired to bypass Google storage limits**).
+- Streamed local chunk split/reassemble engine with SHA-256 verification, no-clobber output publication and overwrite guards (for approved/user-controlled storage targets; **not wired to bypass Google storage limits**).
 - GitHub Actions workflow to compile debug APK when pushed to a repository.
 
 ## Not yet implemented or validated
