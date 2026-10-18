@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.6-alpha — 2026-10-18
+
+- Add combined Docker Android lint + unit tests + APK output command and SHA-256 artifact verification.
+- Reduce redundant CI build invocations and keep generated output in a single artifact.
+- Derive Android Google OAuth custom redirect scheme from the client ID when provided.
+- Document Google's Android custom redirect restrictions and device-side requirements.
+- Add Android manifest / build workflow source preflight for offline environments.
+- Core Kotlin smoke tests and offline source preflight passed; full Android build blocked by missing toolchain and network.
+
+
+
 ## v0.2.5-alpha — 2026-10-18
 
 - Added metadata-only Google Password Manager CSV site discovery; passwords and notes are not imported.

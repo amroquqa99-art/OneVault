@@ -13,9 +13,17 @@ val googleClientId = providers.gradleProperty("onevault.googleClientId")
     .get()
 // Android OAuth client ID format: <numeric-id>-<hash>.apps.googleusercontent.com
 // The redirect scheme MUST match your OAuth client registration.
+// AppAuth's Google example uses com.googleusercontent.apps.<client-prefix>
+// as the Android redirect scheme. Newly registered Android clients need
+// the custom URI scheme explicitly enabled in Google Cloud advanced settings.
+val defaultRedirectScheme = if (googleClientId.isBlank()) "org.onevault.app"
+    else "com.googleusercontent.apps.${googleClientId.substringBefore(".apps.googleusercontent.com")}" 
 val redirectScheme = providers.gradleProperty("onevault.redirectScheme")
-    .orElse(local.getProperty("onevault.redirectScheme", "org.onevault.app"))
+    .orElse(local.getProperty("onevault.redirectScheme", defaultRedirectScheme))
     .get()
+require(redirectScheme.matches(Regex("[a-zA-Z][a-zA-Z0-9+.-]*"))) {
+    "Invalid OAuth redirect scheme: $redirectScheme"
+}
 
 android {
     namespace = "org.onevault.app"
@@ -24,8 +32,8 @@ android {
         applicationId = "org.onevault.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.2.5-alpha"
+        versionCode = 6
+        versionName = "0.2.6-alpha"
         manifestPlaceholders["appAuthRedirectScheme"] = redirectScheme
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"$googleClientId\"")
         buildConfigField("String", "OAUTH_REDIRECT_URI", "\"$redirectScheme:/oauth2redirect\"")

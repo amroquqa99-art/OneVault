@@ -9,26 +9,25 @@ permissions:
 jobs:
   android:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Verify Docker Compose
+      - name: Check Docker Compose availability
         run: docker compose version
-      - name: Run JVM tests using the same Docker toolchain
-        run: bash tools/docker-build.sh test
-      - name: Build debug APK using containerized toolchain
-        run: bash tools/docker-build.sh build
-      - name: Inspect output
+      - name: Compile, test, lint and package using pinned Docker toolchain
+        run: bash tools/docker-build.sh all
+      - name: Verify APK archive exists and checksum matches
         run: |
           test -s app/build/outputs/apk/debug/app-debug.apk
-          sha256sum app/build/outputs/apk/debug/app-debug.apk | tee app-debug.apk.sha256
-      - name: Upload installable debug APK
+          cd app/build/outputs/apk/debug
+          sha256sum -c app-debug.apk.sha256
+      - name: Upload APK and SHA-256 checksum
         uses: actions/upload-artifact@v4
         with:
           name: OneVault-debug-apk
           path: |
             app/build/outputs/apk/debug/app-debug.apk
-            app-debug.apk.sha256
+            app/build/outputs/apk/debug/app-debug.apk.sha256
           if-no-files-found: error
           retention-days: 30
