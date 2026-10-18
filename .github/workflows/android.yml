@@ -1,0 +1,32 @@
+name: Android (Docker)
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify Docker Compose
+        run: docker compose version
+      - name: Build debug APK using containerized toolchain
+        run: bash tools/docker-build.sh build
+      - name: Inspect output
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          sha256sum app/build/outputs/apk/debug/app-debug.apk | tee app-debug.apk.sha256
+      - name: Upload installable debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OneVault-debug-apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app-debug.apk.sha256
+          if-no-files-found: error
+          retention-days: 30

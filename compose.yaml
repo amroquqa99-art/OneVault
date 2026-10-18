@@ -1,0 +1,17 @@
+name: onevault
+services:
+  android:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - gradle-cache:/root/.gradle
+    environment:
+      GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m
+    command: ["gradle", "--no-daemon", ":app:assembleDebug", "--stacktrace"]
+    # Container network is used only for Gradle/Android dependency resolution.
+    # No Google credentials or cloud files are mounted into the build.
+volumes:
+  gradle-cache:

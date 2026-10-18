@@ -1,0 +1,5 @@
+# Copy as local.properties; Android Studio sets sdk.dir automatically.
+# google OAuth client ID must be your own Android app credential.
+onevault.googleClientId=YOUR_ANDROID_OAUTH_CLIENT_ID
+# Must match the registered redirect scheme in Google's OAuth settings.
+onevault.redirectScheme=org.onevault.app
