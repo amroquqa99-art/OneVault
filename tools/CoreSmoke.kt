@@ -14,6 +14,19 @@ fun main() {
     val findings=mutableListOf<MailEvidence.Finding>()
     MailEvidence.scan(mail.reader()){findings+=it}
     check(findings.size==1 && findings.first().host=="github.com")
+    val raw = byteArrayOf(1,2,3,4,5,6,7)
+    check(BoundedIo.readAtMost(raw.inputStream(), 7).contentEquals(raw))
+    try { BoundedIo.readAtMost(raw.inputStream(), 6); error("Bounded input limit bypass") }
+    catch (expected: IllegalArgumentException) { }
+    val registrations = listOf(
+        IdentityInsights.Registration("a","github","Development","confirmed"),
+        IdentityInsights.Registration("a","notion","Productivity","probable"),
+        IdentityInsights.Registration("a","notion","Productivity","probable"),
+        IdentityInsights.Registration("b","github","Development","confirmed")
+    )
+    val insight=IdentityInsights.forAccount("a",registrations)
+    check(insight.total==2 && insight.confirmed==1 && insight.probable==1)
+    check(IdentityInsights.categoryBreakdown("a",registrations).size==2)
     val dir = kotlin.io.path.createTempDirectory("onevault-smoke-").toFile()
     try {
         val source = File(dir, "source.bin")
@@ -29,6 +42,6 @@ fun main() {
             ChunkCodec.assemble(manifest.parts, chunks, File(dir, "broken.bin"), manifest.sha256)
             error("Corruption detection failed")
         } catch (expected: IllegalArgumentException) { }
-        println("PASS quota policy / CSV / email evidence / naming / chunks / corruption detection")
+        println("PASS quotas / CSV / mail evidence / identity insights / bounded I/O / chunks / corruption")
     } finally { dir.deleteRecursively() }
 }

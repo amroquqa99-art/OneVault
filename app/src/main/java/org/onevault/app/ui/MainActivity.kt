@@ -25,6 +25,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.BackoffPolicy
+import java.util.concurrent.TimeUnit
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import org.json.JSONObject
@@ -32,6 +36,8 @@ import org.onevault.app.BuildConfig
 import org.onevault.app.cloud.GoogleAuth
 import org.onevault.app.cloud.GoogleDriveApi
 import org.onevault.app.cloud.GoogleTokens
+import org.onevault.app.core.BoundedIo
+import org.onevault.app.core.IdentityInsights
 import org.onevault.app.core.CsvTools
 import org.onevault.app.core.MailEvidence
 import org.onevault.app.core.StorageBudget
@@ -88,15 +94,16 @@ class MainActivity : ComponentActivity() {
     }
     private val chooseCsv=registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if(uri!=null)runNetwork("CSV import failed") {
-            val bytes=contentResolver.openInputStream(uri)!!.use {input->input.readNBytes(3*1024*1024+1)}
+            val bytes=contentResolver.openInputStream(uri)!!.use {input->BoundedIo.readAtMost(input,3*1024*1024)}
             require(bytes.size<=3*1024*1024){"CSV is too large"}
             val rows=CsvTools.parse(bytes.toString(Charsets.UTF_8))
             var imported=0
+            val existingEmails=db.accounts().mapTo(mutableSetOf()) { it.email.lowercase() }
             rows.forEachIndexed { index,row ->
                 if(row.isNotEmpty()) {
                     val email=row[0].trim()
                     if(index==0 && email.equals("email",true))return@forEachIndexed
-                    if(android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() && db.accounts().none { it.email==email.lowercase() }) {
+                    if(android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() && existingEmails.add(email.lowercase())) {
                         db.addAccount(email,row.getOrNull(1)?:email.substringBefore('@'),row.getOrNull(2)?:"General")
                         imported++
                     }
@@ -121,7 +128,7 @@ class MainActivity : ComponentActivity() {
         val pass=importPassword;importPassword=null
         if(uri!=null && pass!=null)runNetwork("Restore failed") {
             try {
-                val bytes=contentResolver.openInputStream(uri)!!.use { it.readNBytes(8*1024*1024+1) }
+                val bytes=contentResolver.openInputStream(uri)!!.use { BoundedIo.readAtMost(it,8*1024*1024) }
                 require(bytes.size<=8*1024*1024){"Backup is too large"}
                 val clear=PortableBackupCrypto.decrypt(bytes,pass)
                 try {db.restoreJson(JSONObject(String(clear,Charsets.UTF_8)))} finally {clear.fill(0)}
@@ -193,6 +200,7 @@ class MainActivity : ComponentActivity() {
         Ui.card(this,container,"My OneVault") {b ->
             b.addView(Ui.label(this,"${accounts.size} accounts   ·   ${db.platforms().size} platforms",20f,true))
             b.addView(Ui.subtle(this,"${links.size} identity connections  ·  ${files.size} cached cloud files"))
+            b.addView(Ui.subtle(this,"${links.count{it.evidence=="confirmed"}} confirmed · ${links.count{it.evidence=="probable"}} probable registrations"))
         }
         val connected=accounts.filter{it.linked};val known=connected.filter{it.quota>0}
         val total=known.sumOf{it.quota};val used=known.sumOf{it.used}
@@ -229,6 +237,11 @@ class MainActivity : ComponentActivity() {
             }
         })
         container.addView(Ui.space(this,14))
+        val allPlatforms=db.platforms().associateBy { it.id }
+        val registrations=db.associations().map { relation ->
+            IdentityInsights.Registration(relation.accountId,relation.platformId,
+                allPlatforms[relation.platformId]?.category?:"Uncategorized",relation.evidence)
+        }
         db.accounts().forEach {a ->
             Ui.card(this,container,a.alias) {b ->
                 b.addView(Ui.label(this,a.email,14f))
@@ -237,8 +250,11 @@ class MainActivity : ComponentActivity() {
                     val budget=StorageBudget(a.quota,a.used,a.reserved)
                     b.addView(Ui.subtle(this,"${Ui.bytes(a.used)} / ${Ui.bytes(a.quota)} · safe ${Ui.bytes(budget.safe)}"))
                 }
-                val connectionCount=db.associations().count {it.accountId==a.id}
-                b.addView(Ui.subtle(this,"$connectionCount platforms linked"))
+                val insight=IdentityInsights.forAccount(a.id,registrations)
+                b.addView(Ui.subtle(this,"${insight.total} platforms: ${insight.confirmed} confirmed · ${insight.probable} probable · ${insight.unknown} unknown"))
+                val breakdown=IdentityInsights.categoryBreakdown(a.id,registrations).take(4)
+                if(breakdown.isNotEmpty()) b.addView(Ui.subtle(this,
+                    breakdown.joinToString("  |  ") { "${it.category}: ${it.total}" }))
                 b.addView(Ui.secondaryButton(this,"Edit details") {accountDialog(a)})
                 b.addView(Ui.space(this,6))
                 if(a.linked)b.addView(Ui.secondaryButton(this,"Disconnect Google") {
@@ -414,7 +430,11 @@ class MainActivity : ComponentActivity() {
             }
             require(size>0){"Selected file must report a nonzero size"}
             val jobId=db.createJob(accountId,uri.toString(),name,size)
-            val request=OneTimeWorkRequestBuilder<UploadWorker>().setInputData(workDataOf("job_id" to jobId)).build()
+            val request=OneTimeWorkRequestBuilder<UploadWorker>()
+                .setInputData(workDataOf("job_id" to jobId))
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,30,TimeUnit.SECONDS)
+                .build()
             WorkManager.getInstance(this).enqueueUniqueWork("upload-$jobId",ExistingWorkPolicy.KEEP,request)
             toast("Upload queued. It can resume after an interruption.")
             render()

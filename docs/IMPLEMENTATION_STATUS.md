@@ -50,3 +50,11 @@
 - `AGENTS.md` enforces Docker-first rule; `docs/PROJECT_STANDARD.md` is reusable across projects.
 - New JUnit tests in `app/src/test/` were committed but **could not execute** because GitHub Actions failed before runner provisioning.
 - Runner was not allocated (`runner_id: 0`, zero steps). Root cause is not established. See `docs/GITHUB_ACTIONS_DIAGNOSTICS.md`.
+
+## v0.2.3 alpha follow-up
+
+- Android API-level compatibility: bounded file and backup reads use custom `BoundedIo` rather than Java 9 `InputStream.readNBytes`.
+- Identity insights show confirmed/probable/unknown links with category counts; pure Kotlin tests pass.
+- Upload worker now requires network connectivity and has explicit exponential backoff; failed retries show a terminal failure state.
+- Account import eliminates O(N²) duplicate lookups.
+- Running `bash tools/test-core.sh` locally passed. Android SDK/Docker are not present in the current execution runtime, and GitHub-hosted jobs were rejected before a runner starts. An APK still **does not exist**; user must resolve the GitHub Actions runner issue or run the Docker build on a working Docker host.

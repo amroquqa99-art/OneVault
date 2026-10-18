@@ -47,6 +47,20 @@ class CoreTest {
         }
     }
 
+    @Test fun boundedReadsAndInventory() {
+        val data=ByteArray(123) { it.toByte() }
+        assertArrayEquals(data,BoundedIo.readAtMost(data.inputStream(),123))
+        try { BoundedIo.readAtMost(data.inputStream(),100); fail("Expected bound violation") }
+        catch (expected: IllegalArgumentException) { }
+        val evidence=listOf(
+            IdentityInsights.Registration("a","1","Productivity","confirmed"),
+            IdentityInsights.Registration("a","2","Productivity","probable"),
+            IdentityInsights.Registration("b","3","Development","unknown"))
+        assertEquals(2,IdentityInsights.forAccount("a",evidence).total)
+        assertEquals(1,IdentityInsights.categoryBreakdown("a",evidence).size)
+        assertEquals(1,IdentityInsights.categoryBreakdown("a",evidence)[0].confirmed)
+    }
+
     @Test fun normalizePlatformHosts() {
         assertEquals("github.com",PlatformNames.normalize(" https://WWW.GITHUB.COM/login "))
     }

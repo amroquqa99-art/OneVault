@@ -1,13 +1,13 @@
 # OneVault — Personal Cloud & Identity Manager
 
-> **Status: v0.1.0-alpha SOURCE PROJECT, NOT a finished production APK.**
+> **Status: v0.2.3-alpha SOURCE PROJECT, NOT a finished production APK.**
 > Personal, local-first Android app. The source is intended for a private GitHub repository.
 
 **OneVault** brings a personal account registry, platform-registration inventory, optional encrypted password vault, and multiple Google Drive file indexes into one interface. The long-term roadmap includes compliant storage adapters, TeraBox, split-file recovery and optional unified web sharing.
 
 ## Implemented in source
 
-- Android UI: dashboard, account registry, platform directory, cached cloud file explorer, vault, settings.
+- Android UI: dashboard, account registry, per-account platform-category breakdown and confidence counts, platform directory, cached cloud file explorer, vault, settings.
 - Local SQLite account and platform graph, categories, states, linked-evidence confidence, per-account storage reserve.
 - Manual account/platform/link management and CSV account import (`email,alias,category`).
 - Offline email-header evidence import from **user-exported MBOX/EML files**. Marks results as **probable**, never confirmed; only reads message headers, not message bodies.
@@ -15,7 +15,7 @@
 - Password-protected portable backup and restore (PBKDF2-HMAC-SHA256 + AES-256-GCM). Google OAuth refresh tokens are deliberately excluded from backups.
 - Google OAuth via AppAuth (requires your own Google Cloud Android OAuth client configuration); access/refresh state encrypted with Keystore.
 - Google Drive API: about/storage quota, paginated file list and cache, native Drive links, downloads for binary files, resumable chunked uploads of files chosen in Android's file picker.
-- WorkManager persistent upload jobs with session checkpoints and account-specific reserve policy.
+- WorkManager persistent upload jobs with network-required scheduling, exponential retry, session checkpoints and account-specific reserve policy.
 - Streamed local chunk split/reassemble engine with SHA-256 verification (for approved/user-controlled storage targets; **not wired to bypass Google storage limits**).
 - GitHub Actions workflow to compile debug APK when pushed to a repository.
 
@@ -139,3 +139,11 @@ for other projects is in [docs/PROJECT_STANDARD.md](docs/PROJECT_STANDARD.md).
 GitHub Actions runs failed *before a runner started* (`steps: []`,
 `runner_id: 0`). No Android APK has been produced or installed/tested. See
 [GitHub Actions diagnostics](docs/GITHUB_ACTIONS_DIAGNOSTICS.md).
+
+## v0.2.3 alpha changes
+
+- Added Android API-compatible bounded stream reading for imported account CSV and encrypted backup restore (avoids Java 9 `readNBytes` on older Android APIs).
+- Added immutable per-account inventory summaries (confirmed/probable/unknown), platform-category counts and associated portable unit tests.
+- Added connected-network constraint and exponential backoff for WorkManager uploads; terminal retries are marked `failed`.
+- Optimized CSV duplicate detection and moved account relationship lookup out of each account-card render.
+- Re-ran portable Kotlin core smoke tests successfully. **Android compilation is still unverified** because the account-level GitHub Actions run fails before runner allocation. See `docs/GITHUB_ACTIONS_DIAGNOSTICS.md`.

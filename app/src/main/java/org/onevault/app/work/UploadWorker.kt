@@ -63,8 +63,9 @@ class UploadWorker(ctx:Context,params:WorkerParameters):CoroutineWorker(ctx,para
             }
             if(sent==job.bytes)Result.success() else Result.retry()
         } catch(e:Exception) {
-            db.updateJob(id,db.job(id)?.done?:0,null,"retry pending")
-            if(runAttemptCount<8) Result.retry() else Result.failure()
+            val shouldRetry = runAttemptCount < 8 && !isStopped
+            db.updateJob(id,db.job(id)?.done?:0,null,if(shouldRetry) "retry pending" else "failed")
+            if(shouldRetry) Result.retry() else Result.failure()
         } finally {db.close()}
     }
 }

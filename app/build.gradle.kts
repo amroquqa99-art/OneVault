@@ -24,8 +24,8 @@ android {
         applicationId = "org.onevault.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0-alpha"
+        versionCode = 3
+        versionName = "0.2.3-alpha"
         manifestPlaceholders["appAuthRedirectScheme"] = redirectScheme
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"$googleClientId\"")
         buildConfigField("String", "OAUTH_REDIRECT_URI", "\"$redirectScheme:/oauth2redirect\"")
