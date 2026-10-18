@@ -1,6 +1,6 @@
 # OneVault — Personal Cloud & Identity Manager
 
-> **Status: v0.2.4-alpha SOURCE PROJECT, NOT a finished production APK.**
+> **Status: v0.2.5-alpha SOURCE PROJECT, NOT a finished production APK.**
 > Personal, local-first Android app. The source is intended for a private GitHub repository.
 
 **OneVault** brings a personal account registry, platform-registration inventory, optional encrypted password vault, and multiple Google Drive file indexes into one interface. The long-term roadmap includes compliant storage adapters, TeraBox, split-file recovery and optional unified web sharing.
@@ -155,3 +155,11 @@ GitHub Actions runs failed *before a runner started* (`steps: []`,
 - Offline mail-import evidence cannot silently downgrade manually confirmed platform associations or replace their notes; an explicit manual edit can still change confidence.
 - Per-account Google OAuth refreshes are synchronized inside the process to prevent refresh-token races.
 - Adds portable JVM smoke/JUnit tests for capacity, overflow resistance, evidence precedence, and upload offset responses. **This release remains source-only until Android compilation and testing succeed.**
+
+## v0.2.5 alpha — saved-login site discovery
+
+- Accounts includes **Import saved-login site list** for user-exported Google Password Manager CSV (`url`, `username`, optional `name`).
+- Matches saved-login usernames to emails already in OneVault; stores **probable** associations and deduplicates the same website. Saved credentials do not prove an account remains active.
+- Parses as a bounded stream, retaining only site URL, username and site name. Password and note column values are **discarded**, not saved to OneVault.
+- The exported CSV itself **contains plaintext passwords**. Handle locally, never upload it to GitHub, and delete it after the import.
+- Pure Kotlin smoke tests pass. Android build/integration tests remain unavailable; no APK is supplied.

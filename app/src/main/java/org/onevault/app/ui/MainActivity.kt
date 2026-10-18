@@ -40,6 +40,7 @@ import org.onevault.app.core.BoundedIo
 import org.onevault.app.core.IdentityInsights
 import org.onevault.app.core.CsvTools
 import org.onevault.app.core.MailEvidence
+import org.onevault.app.core.PasswordExportInspector
 import org.onevault.app.core.PlatformClassifier
 import org.onevault.app.core.StorageBudget
 import org.onevault.app.data.Account
@@ -92,6 +93,27 @@ class MainActivity : ComponentActivity() {
                 }
                 "Identified $findings unique possible platforms. Review each manually; not proof of current registration."
             }
+        }
+    }
+    private val choosePasswordMetadata=registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if(uri!=null)runNetwork("Password metadata import failed") {
+            val accounts=db.accounts().associateBy{it.email.lowercase()}
+            val summary=contentResolver.openInputStream(uri)!!.use { source ->
+                java.io.InputStreamReader(BoundedIo.limit(source,8L*1024*1024),Charsets.UTF_8).use { reader ->
+                    PasswordExportInspector.inspect(reader,accounts.keys)
+                }
+            }
+            val cache=db.platforms().associateBy{it.host}.mapValuesTo(mutableMapOf()){it.value.id}
+            summary.candidates.forEach { candidate ->
+                val id=cache[candidate.host] ?: db.addPlatform(candidate.host,candidate.platform,"Uncategorized").also {
+                    cache[candidate.host]=it
+                }
+                val account=accounts[candidate.email] ?: return@forEach
+                db.linkAccountPlatform(account.id,id,"probable","Saved-login metadata; verify whether account remains active",
+                    preserveStrongerEvidence=true)
+            }
+            "Imported ${summary.candidates.size} possible platform connections; ${summary.unmatchedRows} unmatched usernames; " +
+                "${summary.invalidRows} invalid URLs. Passwords were not imported. Delete the source plaintext CSV safely."
         }
     }
     private val chooseCsv=registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -237,6 +259,15 @@ class MainActivity : ComponentActivity() {
                 evidenceAccountId=a.id
                 chooseEvidence.launch(arrayOf("*/*"))
             }
+        })
+        container.addView(Ui.space(this,8))
+        container.addView(Ui.secondaryButton(this,"Import saved-login site list (CSV; no passwords)") {
+            AlertDialog.Builder(this).setTitle("Sensitive export")
+                .setMessage("The original CSV contains plaintext passwords. OneVault reads only URL, username and site name. " +
+                    "Passwords are neither imported into the vault nor saved. Delete the CSV after importing and review the inferred links.")
+                .setNegativeButton("Cancel",null).setPositiveButton("Choose CSV") {_,_->
+                    choosePasswordMetadata.launch(arrayOf("text/*","application/octet-stream"))
+                }.show()
         })
         container.addView(Ui.space(this,14))
         val allPlatforms=db.platforms().associateBy { it.id }

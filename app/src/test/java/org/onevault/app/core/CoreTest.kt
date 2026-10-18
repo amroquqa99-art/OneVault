@@ -91,6 +91,15 @@ class CoreTest {
         assertEquals(1,IdentityInsights.categoryBreakdown("a",evidence)[0].confirmed)
     }
 
+    @Test fun passwordManagerMetadataNeverStoresSecrets() {
+        val csv="name,url,username,password,note\nA,https://github.com/login,user@gmail.com,secret1234,my note\n" 
+        val imported=PasswordExportInspector.inspect(csv.reader(),setOf("user@gmail.com"))
+        assertEquals(1,imported.candidates.size)
+        assertEquals("github.com",imported.candidates[0].host)
+        assertFalse(imported.toString().contains("secret1234"))
+        assertFalse(imported.toString().contains("my note"))
+    }
+
     @Test fun normalizePlatformHosts() {
         assertEquals("github.com",PlatformNames.normalize(" https://WWW.GITHUB.COM/login "))
         assertEquals("Development",PlatformClassifier.classify("accounts.github.com"))

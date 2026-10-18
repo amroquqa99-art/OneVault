@@ -2,9 +2,29 @@ package org.onevault.app.core
 
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.io.FilterInputStream
 
 /** Portable bounded reads: do not rely on Java 9 InputStream.readNBytes on older Android. */
 object BoundedIo {
+    /** Streaming size cap; never buffers an entire plaintext password export. */
+    fun limit(source: InputStream, maxBytes: Long): InputStream {
+        require(maxBytes > 0L)
+        return object : FilterInputStream(source) {
+            private var consumed=0L
+            override fun read(): Int {
+                val value=super.read()
+                if(value>=0) {consumed++;require(consumed<=maxBytes){"Input exceeds safe byte limit"}}
+                return value
+            }
+            override fun read(b: ByteArray, off: Int, len: Int): Int {
+                // InputStream implementations may delegate to read() internally; access the wrapped
+                // stream directly here to avoid double-counting.
+                val count=`in`.read(b,off,len)
+                if(count>0) {consumed+=count;require(consumed<=maxBytes){"Input exceeds safe byte limit"}}
+                return count
+            }
+        }
+    }
     fun readAtMost(source: InputStream, maxBytes: Int): ByteArray {
         require(maxBytes >= 0 && maxBytes < Int.MAX_VALUE) { "Invalid byte limit" }
         val output = ByteArrayOutputStream(minOf(maxBytes, 8192))

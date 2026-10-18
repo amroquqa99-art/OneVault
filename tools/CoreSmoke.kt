@@ -34,6 +34,19 @@ fun main() {
     val falseFindings=mutableListOf<MailEvidence.Finding>()
     MailEvidence.scan(forged.reader()){falseFindings+=it}
     check(falseFindings.isEmpty()) { "Message bodies must never be parsed as registration headers" }
+    val pwCsv="""name,url,username,password,note
+"My Site",https://accounts.example.org/login,foo@gmail.com,"sensitive,password",private
+"Another",https://github.com/login,foo@gmail.com,hunter2,do-not-store
+"Duplicate",https://github.com,foo@gmail.com,other,secret
+"Unknown",https://elsewhere.com,other@example.org,plaintext,comment
+"""
+    val pwMetadata=PasswordExportInspector.inspect(pwCsv.reader(),setOf("foo@gmail.com"))
+    check(pwMetadata.candidates.size==2 && pwMetadata.unmatchedRows==1)
+    check(pwMetadata.candidates.map{it.host}.toSet()==setOf("accounts.example.org","github.com"))
+    check(pwMetadata.toString().contains("hunter2").not() && pwMetadata.toString().contains("sensitive,password").not())
+    check(BoundedIo.limit(byteArrayOf(1,2,3).inputStream(),4).readBytes().size==3)
+    try {BoundedIo.limit(byteArrayOf(1,2,3).inputStream(),2).readBytes();error("Bounded stream bypass")}
+    catch (expected: IllegalArgumentException) { }
     val raw = byteArrayOf(1,2,3,4,5,6,7)
     check(BoundedIo.readAtMost(raw.inputStream(), 7).contentEquals(raw))
     try { BoundedIo.readAtMost(raw.inputStream(), 6); error("Bounded input limit bypass") }

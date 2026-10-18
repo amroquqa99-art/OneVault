@@ -77,3 +77,10 @@
 - Safe-quota math saturates without 64-bit overflow and upload completion is checked explicitly.
 - Portable Kotlin core smoke tests pass. **Android app still has not been compiled**, and no APK has been validated on a device; the registered OAuth flow has not been integration-tested.
 - Docker-first builds remain configured in `Dockerfile`, `compose.yaml` and `tools/docker-build.sh`. GitHub-hosted runner allocation is an external blocker (no runner ID, no steps).
+
+## v0.2.5 alpha — saved-login discovery
+
+- User-exported Google Password Manager CSV (`url`, `username`, optional `name`) can add **probable** platform links to emails already registered.
+- Passwords and notes are not retained as fields or written to the vault; stream input is bounded. No Gmail permission is used.
+- The plaintext original CSV still needs secure handling and deletion after import.
+- Pure Kotlin parser smoke tests pass; Android/UI/device testing is still outstanding.

@@ -2,6 +2,8 @@
 
 ## v0.2.5-alpha — 2026-10-18
 
+- Added metadata-only Google Password Manager CSV site discovery; passwords and notes are not imported.
+- Added bounded streaming parser with duplicate suppression and matching to existing email identities.
 - Prevented accidental overwrite of existing output files during local chunk reassembly: atomic no-clobber hard-link publication after checksums pass.
 - Prevented local split operations from reusing nonempty chunk directories; partial chunks are cleaned up after errors.
 - Prevented malicious or malformed mail-message body lines from being mistaken for registration headers during EML/MBOX evidence discovery.

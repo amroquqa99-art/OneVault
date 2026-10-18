@@ -37,3 +37,12 @@ Cases 1, 2, 5, 6 need real Android/DB or instrumentation validation; pure decisi
 - Subdomain categorization must classify `accounts.github.com` as Development but reject lookalikes such as `fakegithub.com`.
 - Validate safe quota arithmetic at `Long.MAX_VALUE` bounds.
 - Actual Android backup/restore, OAuth identity flow, SAF handling, and WorkManager jobs still require a built APK and hardware/emulator tests.
+
+## v0.2.5 saved-login CSV discovery
+
+- Use a dummy password CSV with `url,username,password` and optional `name,note` columns.
+- Include quoted passwords containing commas, line breaks, and escaped quotes; verify they do not appear in saved associations or backup exports.
+- Verify only known email usernames match accounts; empty and malformed URLs are skipped.
+- Import duplicate URLs for one identity and verify deduplication and preservation of manually confirmed evidence.
+- Run with thousands of fake rows under a memory profiler; no full password CSV should be buffered.
+- Warn users to delete the original plaintext CSV after processing and not store it in shared locations.
