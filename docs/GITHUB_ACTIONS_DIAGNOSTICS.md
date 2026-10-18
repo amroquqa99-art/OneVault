@@ -2,13 +2,14 @@
 
 Private repository: `amroquqa99-art/OneVault`.
 
-Three initial workflow attempts, including one explicit retry, terminated
+Multiple workflow attempts, including the v0.2.3-alpha commit, terminated
 within seconds **before a GitHub runner was provisioned**. The GitHub Jobs API
 reported `runner_id: 0` and `steps: []` for the jobs we inspected. This means
 we cannot derive an Android compiler error from these failures. The root cause
 is unknown from the available logs.
 
-Observed runs:
+Representative observed runs:
+- https://github.com/amroquqa99-art/OneVault/actions/runs/39142558268 (v0.2.3-alpha: no runner, no steps)
 - https://github.com/amroquqa99-art/OneVault/actions/runs/39140515274
 - https://github.com/amroquqa99-art/OneVault/actions/runs/39140698580
 - https://github.com/amroquqa99-art/OneVault/actions/runs/39140853887
