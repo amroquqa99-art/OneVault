@@ -43,3 +43,10 @@
 - Host setup requires Docker Engine/Desktop and Compose v2, not host Android SDK/Gradle.
 - `GoogleAuth` offloads userinfo network verification from the Android main thread.
 - Portable Kotlin core smoke tests passed; Android binary build is **unverified** until CI runs successfully.
+
+## GitHub verification (2026-10-18)
+
+- Private GitHub repository source pushed and verified; Docker and all Android source files present.
+- `AGENTS.md` enforces Docker-first rule; `docs/PROJECT_STANDARD.md` is reusable across projects.
+- New JUnit tests in `app/src/test/` were committed but **could not execute** because GitHub Actions failed before runner provisioning.
+- Runner was not allocated (`runner_id: 0`, zero steps). Root cause is not established. See `docs/GITHUB_ACTIONS_DIAGNOSTICS.md`.

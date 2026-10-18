@@ -133,3 +133,9 @@ bash tools/build-apk.sh          # runs on your computer; requires Android SDK +
 
 All future changes must follow [AGENTS.md](AGENTS.md). The reusable standard
 for other projects is in [docs/PROJECT_STANDARD.md](docs/PROJECT_STANDARD.md).
+
+### Build status as of 2026-10-18
+
+GitHub Actions runs failed *before a runner started* (`steps: []`,
+`runner_id: 0`). No Android APK has been produced or installed/tested. See
+[GitHub Actions diagnostics](docs/GITHUB_ACTIONS_DIAGNOSTICS.md).
