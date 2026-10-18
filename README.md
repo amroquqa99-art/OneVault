@@ -128,3 +128,8 @@ Create a **private** repository named `OneVault` under your GitHub account. Do n
 bash tools/init-private-repo.sh  # runs on your computer; requires authenticated GitHub CLI
 bash tools/build-apk.sh          # runs on your computer; requires Android SDK + Gradle
 ```
+
+## Project-wide engineering rule
+
+All future changes must follow [AGENTS.md](AGENTS.md). The reusable standard
+for other projects is in [docs/PROJECT_STANDARD.md](docs/PROJECT_STANDARD.md).
