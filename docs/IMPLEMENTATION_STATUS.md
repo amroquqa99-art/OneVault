@@ -84,3 +84,27 @@
 - Passwords and notes are not retained as fields or written to the vault; stream input is bounded. No Gmail permission is used.
 - The plaintext original CSV still needs secure handling and deletion after import.
 - Pure Kotlin parser smoke tests pass; Android/UI/device testing is still outstanding.
+
+## v0.2.6 alpha — build pipeline verification
+
+- Consolidated test, Android lint and debug APK production into one Docker Gradle process
+  with `tools/docker-build.sh all`. Added SHA-256 checksum generation and verification.
+- Added source preflight (`python3 tools/check-source-offline.py`) to detect missing
+  critical project files and malformed AndroidManifest in SDK-less environments.
+- Default AppAuth redirect is now derived from Google client ID if provided; Google
+  disables custom-scheme OAuth by default for new Android clients, so developer console
+  explicit enablement and real-device verification are still prerequisites.
+- Re-ran portable Kotlin core smoke test and offline preflight successfully.
+- Android APK remains **not built** due to no Android SDK, Gradle or Docker installation
+  and no working external package-download connectivity in the current execution image.
+- GitHub Actions has historically failed before runner allocation; no full Android
+  compile, device test, or production vault security audit is claimed.
+
+
+## SDK provisioning attempt and fallback — 2026-10-18
+
+- Confirmed JDK 21 and Kotlin compiler work in the available isolated runtime.
+- Executed the official Android command-line tools download from `dl.google.com`; it failed with `curl: (6) Could not resolve host`. SDK 35 / Gradle 8.11.1 could not be installed here.
+- Added `tools/setup-android-toolchain.sh` to download checksum-verified official toolchains once internet and SDK license acceptance are available, and `tools/build-local.sh` as an optional no-Docker fallback.
+- Docker remains the canonical CI/build environment, with `tools/docker-build.sh all` doing tests, lint and packaging once.
+- Locally validated `bash -n` for new scripts, pure Kotlin core tests, and XML/source preflight; **no actual Android compilation or APK exists**. Real-device testing and OAuth review remain open.

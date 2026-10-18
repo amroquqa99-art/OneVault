@@ -22,3 +22,7 @@ local.properties
 .env
 .env.*
 **/credentials*
+
+# User-local Android build downloads/caches, if configured under repo
+.toolchains/
+android-sdk/

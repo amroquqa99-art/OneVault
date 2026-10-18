@@ -1,6 +1,6 @@
 # OneVault — Personal Cloud & Identity Manager
 
-> **Status: v0.2.5-alpha SOURCE PROJECT, NOT a finished production APK.**
+> **Status: v0.2.6-alpha SOURCE PROJECT, NOT a finished production APK.**
 > Personal, local-first Android app. The source is intended for a private GitHub repository.
 
 **OneVault** brings a personal account registry, platform-registration inventory, optional encrypted password vault, and multiple Google Drive file indexes into one interface. The long-term roadmap includes compliant storage adapters, TeraBox, split-file recovery and optional unified web sharing.
@@ -38,7 +38,8 @@ Android SDK and Gradle live inside the versioned container image. This builds
 an Android APK (the mobile app itself does not run in Docker).
 
 ```bash
-bash tools/docker-build.sh build    # app/build/outputs/apk/debug/app-debug.apk
+bash tools/docker-build.sh all      # ONE command: JVM tests + lint + APK + SHA256
+bash tools/docker-build.sh build    # debug APK + SHA256 only
 bash tools/docker-build.sh test     # JVM unit tests
 bash tools/docker-build.sh check    # lint and unit tests
 ```
@@ -48,12 +49,28 @@ First run needs internet to download Docker images/Gradle dependencies.
 See [Docker build instructions](docs/DOCKER.md). **APK build has not yet
 been validated here** because Docker Engine is unavailable in this runtime.
 
+## Optional: local Android SDK + Gradle (no Docker)
+
+For machines with network access but without Docker, a checksum-verified
+bootstrapper installs the official Android 35 build toolchain under your home
+directory, with **no system-wide dependency changes**:
+
+```bash
+bash tools/setup-android-toolchain.sh --check
+bash tools/setup-android-toolchain.sh --install
+bash tools/build-local.sh all
+```
+
+See [local toolchain setup](docs/LOCAL_ANDROID_TOOLCHAIN.md). Network access and
+interactive Android SDK license acceptance are necessary. In this sandbox the
+Google archive host cannot resolve; the toolchain **was not installed here**.
+
 ## Alternate: build with Android Studio
 
 1. Install **Android Studio**, Android SDK Platform 35, Build Tools 35, JDK 17 and Gradle 8.11.1 (or generate Gradle wrapper locally).
 2. Open this repository as a Gradle project in Android Studio.
 3. In Google Cloud Console, enable **Google Drive API**, configure OAuth consent for personal use, and create an Android OAuth client for package `org.onevault.app` and your signing key's SHA-1.
-4. Register an OAuth redirect configuration supported for this Android client. The `onevault.redirectScheme` parameter in `local.properties` must match it. *Google may impose additional OAuth redirect restrictions and the actual flow must be verified on device.*
+4. For AppAuth custom-scheme redirect, configure the Google Android OAuth client's **Advanced settings > Enable custom URI scheme**, which Google disables by default for new Android clients. The build derives `com.googleusercontent.apps.<client-prefix>` from `onevault.googleClientId` unless `onevault.redirectScheme` is explicitly provided. The Google OAuth flow remains unverified on a device. See [OAuth integration caveats](docs/DOCKER.md).
 5. Copy `local.properties.example` to `local.properties`, add a local Android SDK path and your OAuth client ID and redirect scheme:
 
    ```properties
