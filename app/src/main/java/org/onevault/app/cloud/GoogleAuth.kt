@@ -19,6 +19,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 
 class GoogleAuth(private val activity: Activity, private val db: VaultDb) {
@@ -82,7 +83,12 @@ class GoogleAuth(private val activity: Activity, private val db: VaultDb) {
 
 /** Worker-safe token refresh. OAuth state is encrypted with Android Keystore. */
 class GoogleTokens(private val context: android.content.Context, private val db:VaultDb) {
-    fun validToken(accountId:String):String {
+    companion object {
+        // Serialize refresh+persist per identity: parallel workers must not overwrite
+        // each other's rotated refresh tokens with a stale AuthState snapshot.
+        private val accountLocks = ConcurrentHashMap<String, Any>()
+    }
+    fun validToken(accountId:String):String = synchronized(accountLocks.getOrPut(accountId) { Any() }) {
         val raw=db.authState(accountId) ?: error("Google account not connected")
         val state=AuthState.jsonDeserialize(raw)
         val service=AuthorizationService(context)
@@ -98,6 +104,6 @@ class GoogleTokens(private val context: android.content.Context, private val db:
         if(completed) db.auth(accountId,state.jsonSerializeString())
         service.dispose()
         if(!completed) error("OAuth refresh timeout")
-        return token ?: error(failure?:"No access token")
+        token ?: error(failure?:"No access token")
     }
 }

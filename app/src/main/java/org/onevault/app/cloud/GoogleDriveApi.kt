@@ -2,7 +2,7 @@ package org.onevault.app.cloud
 
 import org.json.JSONObject
 import org.onevault.app.data.RemoteFile
-import org.onevault.app.core.StorageBudget
+import org.onevault.app.core.ResumableRanges
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.HttpURLConnection
@@ -87,7 +87,7 @@ class GoogleDriveApi(private val bearer:String) {
         return try {
             when(c.responseCode) {
                 200,201 -> TransferResult(total,true)
-                308 -> TransferResult((c.getHeaderField("Range")?.substringAfterLast('-')?.toLongOrNull()?:-1L)+1,false)
+                308 -> TransferResult(ResumableRanges.acknowledgedBytes(c.getHeaderField("Range"),total) ?: 0L,false)
                 else -> error("Resumable session not valid (HTTP ${c.responseCode})")
             }
         } finally {c.disconnect()}
@@ -95,6 +95,9 @@ class GoogleDriveApi(private val bearer:String) {
     fun uploadChunk(sessionUrl:String,input:InputStream,start:Long,total:Long,chunkBytes:Int=4*1024*1024):TransferResult {
         require(sessionUrl.startsWith("https://www.googleapis.com/") || sessionUrl.startsWith("https://www.google.com/"))
         require(start in 0..total && total>0)
+        require(chunkBytes >= 256 * 1024 && chunkBytes % (256 * 1024) == 0)
+        // A resumed session can acknowledge a partial chunk; the next byte offset
+        // comes from Google's Range header, not a locally guessed alignment.
         val bytes=minOf(chunkBytes.toLong(),total-start).toInt()
         if(bytes==0) return TransferResult(total,true)
         val end=start+bytes-1
@@ -116,7 +119,12 @@ class GoogleDriveApi(private val bearer:String) {
             }
             return when(c.responseCode) {
                 200,201 -> TransferResult(total,true)
-                308 -> TransferResult((c.getHeaderField("Range")?.substringAfterLast('-')?.toLongOrNull()?:end)+1,false)
+                308 -> {
+                    val offset=ResumableRanges.acknowledgedBytes(c.getHeaderField("Range"),total)
+                        ?: error("Upload acknowledgement lacks Range; retry by querying session")
+                    require(offset in (start+1)..(end+1)) { "Upload offset inconsistent; requery session" }
+                    TransferResult(offset,false)
+                }
                 else -> error("Chunk upload failed (HTTP ${c.responseCode})")
             }
         } finally {c.disconnect()}

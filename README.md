@@ -1,6 +1,6 @@
 # OneVault — Personal Cloud & Identity Manager
 
-> **Status: v0.2.3-alpha SOURCE PROJECT, NOT a finished production APK.**
+> **Status: v0.2.4-alpha SOURCE PROJECT, NOT a finished production APK.**
 > Personal, local-first Android app. The source is intended for a private GitHub repository.
 
 **OneVault** brings a personal account registry, platform-registration inventory, optional encrypted password vault, and multiple Google Drive file indexes into one interface. The long-term roadmap includes compliant storage adapters, TeraBox, split-file recovery and optional unified web sharing.
@@ -147,3 +147,11 @@ GitHub Actions runs failed *before a runner started* (`steps: []`,
 - Added connected-network constraint and exponential backoff for WorkManager uploads; terminal retries are marked `failed`.
 - Optimized CSV duplicate detection and moved account relationship lookup out of each account-card render.
 - Re-ran portable Kotlin core smoke tests successfully. **Android compilation is still unverified** because the account-level GitHub Actions run fails before runner allocation. See `docs/GITHUB_ACTIONS_DIAGNOSTICS.md`.
+
+## v0.2.4 alpha hardening
+
+- Google resumable upload `Range` acknowledgements are parsed strictly; missing/malformed acknowledgements cannot claim bytes were uploaded. On ambiguous response, worker retries after asking the session for its actual offset.
+- Earlier queued/active transfers reserve remaining bytes when a newer transfer checks the same Google account's safe capacity; missing quota never means infinite space. If an account lacks a reported quota limit (e.g. unlimited organizational storage), this conservative alpha blocks upload until a separate policy is implemented.
+- Offline mail-import evidence cannot silently downgrade manually confirmed platform associations or replace their notes; an explicit manual edit can still change confidence.
+- Per-account Google OAuth refreshes are synchronized inside the process to prevent refresh-token races.
+- Adds portable JVM smoke/JUnit tests for capacity, overflow resistance, evidence precedence, and upload offset responses. **This release remains source-only until Android compilation and testing succeed.**

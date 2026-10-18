@@ -17,6 +17,31 @@ class CoreTest {
         assertTrue(budget.accepts(1_500))
         assertFalse(budget.accepts(1_501))
         assertEquals(0L,StorageBudget(10,20,2).safe)
+        assertEquals(0L,StorageBudget(Long.MAX_VALUE,0,Long.MAX_VALUE,Long.MAX_VALUE).safe)
+    }
+
+    @Test fun activeTransfersMustRespectEarlierReservations() {
+        val quota=StorageBudget(limit=20_000,used=9_000,reserved=3_000)
+        assertTrue(TransferPolicy.safeForNewUpload(quota,5_000,2_000))
+        assertFalse(TransferPolicy.safeForNewUpload(quota,7_000,2_000))
+        assertFalse(TransferPolicy.safeForNewUpload(quota,1,Long.MAX_VALUE))
+        assertFalse(TransferPolicy.safeForNewUpload(StorageBudget(0,0,0),1,0))
+        assertEquals(0L,StorageBudget(Long.MAX_VALUE,0,Long.MAX_VALUE,Long.MAX_VALUE).safe)
+    }
+
+    @Test fun googleRangeResponsesMustBeValidated() {
+        assertEquals(262144L,ResumableRanges.acknowledgedBytes("bytes=0-262143",524288))
+        assertNull(ResumableRanges.acknowledgedBytes(null,524288))
+        for(header in listOf("bytes=1-30","bytes=0-524288","garbage","bytes=0--1")) {
+            try {ResumableRanges.acknowledgedBytes(header,524288);fail("Accepted invalid: $header")}
+            catch (expected: IllegalArgumentException) { }
+        }
+    }
+
+    @Test fun importedMailCannotDegradeConfirmedRegistration() {
+        assertEquals("confirmed",RegistrationEvidence.keepStronger("confirmed","probable"))
+        assertEquals("confirmed",RegistrationEvidence.keepStronger("confirmed","unknown"))
+        assertEquals("probable",RegistrationEvidence.keepStronger("unknown","probable"))
     }
 
     @Test fun splitThenAssemblePreservesBytesAndHash() {
@@ -29,6 +54,11 @@ class CoreTest {
         ChunkCodec.assemble(manifest.parts,parts,reconstructed,manifest.sha256)
         assertEquals(manifest.sha256,ChunkCodec.sha256(reconstructed))
         assertArrayEquals(input.readBytes(),reconstructed.readBytes())
+        try {ChunkCodec.assemble(manifest.parts,parts,reconstructed,manifest.sha256);fail("Must not overwrite existing file")}
+        catch (expected: IllegalArgumentException) { }
+        assertArrayEquals(input.readBytes(),reconstructed.readBytes())
+        try {ChunkCodec.split(input,parts,256*1024);fail("Must not overwrite existing chunks")}
+        catch (expected: IllegalArgumentException) { }
     }
 
     @Test fun tamperedChunkNeverPublishesOutput() {
@@ -63,5 +93,8 @@ class CoreTest {
 
     @Test fun normalizePlatformHosts() {
         assertEquals("github.com",PlatformNames.normalize(" https://WWW.GITHUB.COM/login "))
+        assertEquals("Development",PlatformClassifier.classify("accounts.github.com"))
+        assertEquals("Uncategorized",PlatformClassifier.classify("fakegithub.com"))
+        assertEquals("Productivity",PlatformClassifier.classify("notion.so"))
     }
 }

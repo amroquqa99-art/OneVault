@@ -58,3 +58,13 @@
 - Upload worker now requires network connectivity and has explicit exponential backoff; failed retries show a terminal failure state.
 - Account import eliminates O(N²) duplicate lookups.
 - Running `bash tools/test-core.sh` locally passed. Android SDK/Docker are not present in the current execution runtime, and GitHub-hosted jobs were rejected before a runner starts. An APK still **does not exist**; user must resolve the GitHub Actions runner issue or run the Docker build on a working Docker host.
+
+## v0.2.4 alpha hardening (2026-10-18)
+
+- Fixed imported email evidence overwriting stronger manually confirmed identity links.
+- Fixed upload allocation ignoring earlier jobs queued against the same provider account.
+- Rejects new Google uploads when quota is unknown rather than assuming unlimited space.
+- Rejects malformed/missing resumable upload acknowledgement without advancing checkpoint.
+- Serialized OAuth refresh operations per account to avoid racing rotated token state.
+- Pure Kotlin smoke tests pass including out-of-bounds Range and quota overflow cases.
+- Google Actions remains at runner-provisioning failure with `runner_id: 0`, `steps: []`; no Android APK was produced or verified.

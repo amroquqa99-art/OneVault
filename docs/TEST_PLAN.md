@@ -17,3 +17,14 @@
 15. Confirm app works without analytics or any OneVault backend.
 
 Core unit smoke test: `bash tools/test-core.sh` (requires Kotlin CLI).
+
+## Priority regression cases added in v0.2.4
+
+1. Queue two uploads where only the first fits once account reserve is subtracted: second must not start a resumable Google upload session.
+2. Simulate missing `storageQuota.limit`: queue must enter `blocked: unavailable quota` and must not upload.
+3. Simulate a Google `308` response without a Range header to an upload chunk: checkpoint must not advance; next retry should query server offset.
+4. Simulate malformed or out-of-bounds `Range` headers: reject rather than silently assuming progress.
+5. Import a probable GitHub registration from exported email after manual confirmed registration: preserve confidence and original note.
+6. Trigger concurrent Google token refresh requests for one account: ensure stored token state is serialized.
+
+Cases 1, 2, 5, 6 need real Android/DB or instrumentation validation; pure decision/parsing functions for 1–5 have JVM tests. Android CI/build is still unavailable due to runner allocation failure.

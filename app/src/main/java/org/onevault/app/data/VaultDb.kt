@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import org.json.JSONArray
 import org.json.JSONObject
+import org.onevault.app.core.RegistrationEvidence
 import org.onevault.app.security.LocalCrypto
 import java.util.UUID
 
@@ -87,12 +88,34 @@ class VaultDb(context: Context): SQLiteOpenHelper(context, "onevault.db", null, 
         "SELECT id,account_id,platform_id,evidence,note,updated_at FROM association ORDER BY updated_at DESC",null).use { c ->
         buildList { while(c.moveToNext()) add(Association(c.getString(0),c.getString(1),c.getString(2),c.getString(3),c.getString(4),c.getLong(5))) }
     }
-    fun linkAccountPlatform(aid:String,pid:String,evidence:String,note:String="") {
+    fun linkAccountPlatform(aid:String,pid:String,evidence:String,note:String="", preserveStrongerEvidence:Boolean=false) {
         require(evidence in listOf("confirmed","probable","unknown"))
-        writableDatabase.insertWithOnConflict("association",null,ContentValues().apply {
-            put("id",UUID.randomUUID().toString());put("account_id",aid);put("platform_id",pid)
-            put("evidence",evidence);put("note",note);put("updated_at",System.currentTimeMillis())
-        },SQLiteDatabase.CONFLICT_REPLACE)
+        val database=writableDatabase
+        database.beginTransaction()
+        try {
+            val existing=database.rawQuery("SELECT id,evidence,note FROM association WHERE account_id=? AND platform_id=?",
+                arrayOf(aid,pid)).use { c ->
+                if(c.moveToFirst()) Triple(c.getString(0),c.getString(1),c.getString(2)) else null
+            }
+            val finalEvidence=if(preserveStrongerEvidence && existing!=null)
+                RegistrationEvidence.keepStronger(existing.second,evidence) else evidence
+            if(existing!=null) {
+                // Import never degrades a confirmed registration or erases its manual evidence note.
+                if(!preserveStrongerEvidence || finalEvidence != existing.second) {
+                    database.update("association",ContentValues().apply {
+                        put("evidence",finalEvidence)
+                        put("note",if(preserveStrongerEvidence && existing.third.isNotBlank()) existing.third else note)
+                        put("updated_at",System.currentTimeMillis())
+                    },"id=?",arrayOf(existing.first))
+                }
+            } else {
+                database.insertOrThrow("association",null,ContentValues().apply {
+                    put("id",UUID.randomUUID().toString());put("account_id",aid);put("platform_id",pid)
+                    put("evidence",finalEvidence);put("note",note);put("updated_at",System.currentTimeMillis())
+                })
+            }
+            database.setTransactionSuccessful()
+        } finally { database.endTransaction() }
     }
     fun storeSecret(accountId:String,label:String,username:String,password:String):String {
         require(password.isNotEmpty())
@@ -136,6 +159,15 @@ class VaultDb(context: Context): SQLiteOpenHelper(context, "onevault.db", null, 
         })
         return id
     }
+    /** Older active transfers reserve capacity before younger jobs start. */
+    fun earlierPendingBytes(jobId:String, accountId:String):Long = readableDatabase.rawQuery(
+        """SELECT COALESCE(SUM(CASE WHEN bytes > done THEN bytes - done ELSE 0 END), 0)
+           FROM transfer WHERE account_id=?
+           AND rowid < (SELECT rowid FROM transfer WHERE id=?)
+           AND state IN ('queued','uploading','retry pending')""",arrayOf(accountId,jobId)).use { c ->
+        if(c.moveToFirst()) c.getLong(0).coerceAtLeast(0L) else 0L
+    }
+
     fun job(id:String):Job? = readableDatabase.rawQuery(
         "SELECT id,account_id,uri,file_name,bytes,done,session_sealed,state FROM transfer WHERE id=?",arrayOf(id)).use { c ->
         if(c.moveToFirst()) Job(c.getString(0),c.getString(1),c.getString(2),c.getString(3),c.getLong(4),c.getLong(5),c.getString(6),c.getString(7)) else null

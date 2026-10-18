@@ -40,6 +40,7 @@ import org.onevault.app.core.BoundedIo
 import org.onevault.app.core.IdentityInsights
 import org.onevault.app.core.CsvTools
 import org.onevault.app.core.MailEvidence
+import org.onevault.app.core.PlatformClassifier
 import org.onevault.app.core.StorageBudget
 import org.onevault.app.data.Account
 import org.onevault.app.data.RemoteFile
@@ -82,8 +83,9 @@ class MainActivity : ComponentActivity() {
                 contentResolver.openInputStream(uri)!!.reader(Charsets.UTF_8).use { reader ->
                     MailEvidence.scan(reader) { evidence ->
                         if(seen.add(evidence.host)) {
-                            val platformId=db.addPlatform(evidence.host,evidence.host,"Uncategorized")
-                            db.linkAccountPlatform(id,platformId,"probable","Imported mail header: ${evidence.subject.take(100)}")
+                            val platformId=db.addPlatform(evidence.host,evidence.host,PlatformClassifier.classify(evidence.host))
+                            db.linkAccountPlatform(id,platformId,"probable","Imported mail header: ${evidence.subject.take(100)}",
+                                preserveStrongerEvidence=true)
                             findings++
                         }
                     }
@@ -500,7 +502,7 @@ class MainActivity : ComponentActivity() {
             b.addView(Ui.subtle(this,"Universal link sharing: requires a trusted live gateway; not active."))
         }
         Ui.card(this,container,"Project") {b->
-            b.addView(Ui.label(this,"OneVault 0.1.0-alpha",16f,true))
+            b.addView(Ui.label(this,"OneVault ${BuildConfig.VERSION_NAME}",16f,true))
             b.addView(Ui.subtle(this,"Local-first · no analytics · no central account · private-use software"))
         }
     }

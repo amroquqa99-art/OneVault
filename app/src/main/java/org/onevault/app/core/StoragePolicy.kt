@@ -9,7 +9,7 @@ data class StorageBudget(
 ) {
     init { require(limit >= 0 && used >= 0 && reserved >= 0 && pending >= 0) }
     val free: Long get() = (limit - used).coerceAtLeast(0)
-    val safe: Long get() = (free - reserved - pending).coerceAtLeast(0)
+    val safe: Long get() = (free - reserved).coerceAtLeast(0).let { (it - pending).coerceAtLeast(0) }
     fun accepts(bytes: Long) = bytes >= 0 && bytes <= safe
 }
 
